@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="zh">
+<!-- {% load static %} -->
+
+<head>
+    <meta charset="UTF-8">
+    <title>后台管理系统</title>
+    <link rel="stylesheet" href="css/element-ui.css">
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/index.css">
+</head>
+
+<body>
+    <div id="app">
+        <div class="header" id="header">
+            <img class="logo-index" src="imgs/logo-index.png" alt="logo index">
+            <div class="sysname">后台管理系统</div>
+            <div class="user-info">
+                <el-dropdown trigger="click" @command="handleCommand">
+                    <span class="el-dropdown-link">
+                        <img class="user-logo" src="imgs/yasuo.jpg">
+                        <span v-text="username"></span>
+                    <i class="el-icon-arrow-down"></i>
+                    </span>
+                    <el-dropdown-menu slot="dropdown">
+                        <el-dropdown-item command="loginout">退出</el-dropdown-item>
+                    </el-dropdown-menu>
+                </el-dropdown>
+            </div>
+        </div>
+        <div class="main">
+            <div class="sidebar" id="sidebar">
+                <el-menu default-active="1-1" class="el-menu-vertical-demo" @select="goto" id="sidebar">
+                    <el-submenu index="1">
+                        <template slot="title"><i class="icon-svg icon-home"></i>分类管理</template>
+                        <el-menu-item index="1-1" id="1-1">组</el-menu-item>
+                        <el-menu-item index="1-2" id="1-2">分类</el-menu-item>
+                        <el-menu-item index="1-3" id="1-3">子类</el-menu-item>
+                    </el-submenu>
+                    <el-submenu index="2">
+                        <template slot="title"><i class="icon-svg icon-gongzhonghao"></i>账号管理</template>
+                        <el-menu-item index="2-1" id="2-1">公众号</el-menu-item>
+                        <el-menu-item index="2-2" id="2-2">cluster</el-menu-item>
+                    </el-submenu>
+                    <el-submenu index="3">
+                        <template slot="title"><i class="icon-svg icon-system"></i>系统状态</template>
+                        <el-menu-item index="3-1" id="3-1">pack server</el-menu-item>
+                    </el-submenu>
+                    <el-menu-item index="4"  id="4"><i class="icon-svg icon-settings"></i>系统维护</el-menu-item>
+                </el-menu>
+            </div>
+            <div class="stage">
+                <!-- page-groups -->
+                <div id="page-groups" class="page">
+                    <div class="crumbs">
+                        <i class="icon-svg icon-home"></i> 分类管理 / 组
+                    </div>
+                    <div class="page-title">组</div>
+                    <div class="page-handle">
+                        <el-button icon="plus" @click="showModal">添加</el-button>
+                        <!-- <el-button icon="delete" @click="delAll">批量删除</el-button> -->
+                        <el-input placeholder="请输入内容" class="search-input">
+                            <el-button slot="append" icon="search"></el-button>
+                        </el-input>
+                    </div>
+                    <div class="page-content">
+                        <div class="group-item" v-for="item in tableData" @click="handleEdit(item)">
+                            <div class="group-name">
+                                <span v-text="item.name"></span>
+                                <span class="close" @click.prevent.stop="handleDelete(item)"></span>
+                            </div>
+                            <div class="group-desc" v-text="item.desc"></div>
+                        </div>
+                        <div class="clearfix"></div>
+                    </div>
+                    <!-- modal -->
+                    <div v-if="modal_isShow" class="modal">
+                        <div class="modalbox">
+                            <div class="modalbox-header">添加组</div>
+                            <div class="modalbox-main">
+                                <div>
+                                    <h5>名称</h5>
+                                    <el-input v-model="add_group_name"></el-input>
+                                </div>
+                                <div>
+                                    <h5>描述</h5>
+                                    <textarea class="well" v-model="add_group_desc"></textarea>
+                                </div>
+                                <div>
+                                    <h5>分类（点击选择）</h5>
+                                    <div class="well">
+                                        <el-tag class="tag" v-for="item in selectableFields" :key="item.name" type="gray"><span v-text="item.name" @click="modalSelectField(item)"></span></el-tag>
+                                    </div>
+                                    <p>已选的分类：</p>
+                                    <div>
+                                        <el-tag class="tag" v-for="item in selectedFields" :key="item.name" :closable="true" type="gray" @close="modalRemoveField(item)"><span v-text="item.name"></span></el-tag>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modalbox-footer">
+                                <button class="btn btn-cancel" @click="hideModal">取消</button>
+                                <button class="btn btn-submit" @click="addGroup">确定</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- page-group-detail -->
+                <div id="page-group-detail" class="page">
+                    <div class="crumbs">
+                        <i class="icon-svg icon-home"></i> 分类管理 / 组 / 详情页
+                    </div>
+                    <div class="page-content page-content-detail">
+                        <div class="detail-control">
+                            <button class="btn btn-cancel" @click="cancelUpdate">取消</button>
+                            <button class="btn btn-submit" @click="update">保存</button>
+                        </div>
+                        <div class="page-part">
+                            <div class="label-item">
+                                <div class="label-item-key">名称</div>
+                                <div class="label-item-value">
+                                    <el-input v-model="name"></el-input>
+                                </div>
+                            </div>
+                            <div class="label-item">
+                                <div class="label-item-key">描述</div>
+                                <div class="label-item-value">
+                                    <el-input type="textarea" :rows="2" v-model="desc"></el-input>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="page-part-last">
+                            <h5>所含分类</h5>
+                            <div class="page-detail-handle">
+                                <el-button icon="plus" @click="showModal">添加</el-button>
+                                <el-input placeholder="请输入内容" class="search-input">
+                                    <el-button slot="append" icon="search"></el-button>
+                                </el-input>
+                            </div>
+                            <div class="group-detail-fields-container">
+                                <el-tag class="tag" v-for="item in fields" :key="item.name" :closable="true" @close="delField(item)"><span v-text="item.name"></span></el-tag>
+                            </div>
+                        </div>
+                        <!-- group detail modal -->
+                        <div v-if="modal_isShow" class="modal">
+                            <div class="modalbox">
+                                <div class="modalbox-header">为组添加分类</div>
+                                <div class="modalbox-main">
+                                    <h5>可选分类</h5>
+                                    <div class="well">
+                                        <el-tag class="tag" v-for="item in fieldsSelectable" :key="item.name"><span v-text="item.name" @click="modalSelectField(item)"></span></el-tag>
+                                    </div>
+                                    <h5>已选</h5>
+                                    <div>
+                                        <el-tag class="tag" v-for="item in fieldsSelected" :key="item.name" :closable="true" @close="modalRemoveField(item)"><span v-text="item.name"></span></el-tag>
+                                    </div>
+                                </div>
+                                <div class="modalbox-footer">
+                                    <button class="btn btn-cancel" @click="hideModal">取消</button>
+                                    <button class="btn btn-submit" @click="modalAddField">确定</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- page-fields -->
+                <div id="page-fields" class="page">
+                    <div class="crumbs">
+                        <i class="icon-svg icon-home"></i> 分类管理 / 分类
+                    </div>
+                    <div class="page-title">分类</div>
+                    <div class="page-handle">
+                        <el-button icon="plus" @click="showModal">添加</el-button>
+                        <el-button icon="delete" @click="delAll">批量删除</el-button>
+                        <el-input placeholder="请输入内容" class="search-input">
+                            <el-button slot="append" icon="search"></el-button>
+                        </el-input>
+                    </div>
+                    <div class="page-content">
+                        <!-- 显示的表格 -->
+                        <el-table :data="tableData" border style="width: 100%, height: 600px" ref="multipleTable" @selection-change="handleSelectionChange">
+                            <el-table-column type="selection" width="55"></el-table-column>
+                            <el-table-column type="index" label="序号" width="100"></el-table-column>
+                            <el-table-column prop="name" label="分类名" sortable></el-table-column>
+                            <el-table-column label="关键词">
+                                <template scope="scope">
+                                    <el-tag type="gray" :key="sub_item" v-for='sub_item in scope.row.keywords' v-text="sub_item"></el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="desc" label="描述" sortable></el-table-column>
+                            <el-table-column label="操作">
+                                <template scope="scope">
+                                    <el-button size="small" @click="handleEdit(scope.$index, scope.row)">编辑</el-button>
+                                    <el-button size="small" type="danger" @click="handleDelete(scope.$index, scope.row)">删除</el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+                    <!-- page field modal -->
+                    <div v-if="modal_isShow" class="modal">
+                        <div class="modalbox">
+                            <div class="modalbox-header">添加分类</div>
+                            <div class="modalbox-main">
+                                <div>
+                                    <h5>分类名称</h5>
+                                    <el-input v-model="add_field_name" placeholder="请输入分类名称"></el-input>
+                                </div>
+                                <div>
+                                    <h5>关键词</h5>
+                                    <div class="well">
+                                        <el-tag class="tag" :key="item" v-for="item in add_field_selected_keywords" :closable="true" :close-transition="false" @close="handleClose(item)" v-text="item"></el-tag>
+                                        <el-input class="input-new-tag" v-if="add_field_keyword_inputVisible" v-model="add_field_keyword" ref="saveTagInput" size="mini" @keyup.enter.native="handleInputConfirm" @blur="handleInputConfirm">
+                                        </el-input>
+                                        <el-button v-else class="button-new-tag" size="small" @click="showInput">+ 关键词</el-button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h5>描述</h5>
+                                    <textarea class="well" v-model="add_field_desc"></textarea>
+                                </div>
+                            </div>
+                            <div class="modalbox-footer">
+                                <button class="btn btn-cancel" @click="hideModal">取消</button>
+                                <button class="btn btn-submit" @click="addfield">确定</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- page-field-detail -->
+                <div id="page-field-detail" class="page">
+                    <div class="crumbs">
+                        <i class="icon-svg icon-home"></i> 分类管理 / 分类 / 详情页
+                    </div>
+                    <div class="page-content page-content-detail">
+                        <div class="detail-control">
+                            <button class="btn btn-cancel" @click="cancelUpdate">取消</button>
+                            <button class="btn btn-submit" @click="update">保存</button>
+                        </div>
+                        <div class="page-part">
+                            <div class="label-item">
+                                <div class="label-item-key">名称</div>
+                                <div class="label-item-value">
+                                    <el-input v-model="name"></el-input>
+                                </div>
+                            </div>
+                            <div class="label-item">
+                                <div class="label-item-key">关键词</div>
+                                <div class="label-item-value">
+                                    <el-tag class="tag" v-for="item in keywords" :key="item" :closable="true" @close="delKeyword(item)"><span v-text="item"></span></el-tag>
+                                    <el-input class="input-new-tag" v-if="keyword_inputVisible" v-model="keyword_inputValue" ref="saveTagInput" size="mini" @keyup.enter.native="handleInputConfirm" @blur="handleInputConfirm">
+                                    </el-input>
+                                    <el-button v-else class="button-new-tag" size="small" @click="showInput">+ 关键词</el-button>
+                                </div>
+                            </div>
+                            <div class="label-item">
+                                <div class="label-item-key">描述</div>
+                                <div class="label-item-value">
+                                    <el-input type="textarea" :rows="2" v-model="desc"></el-input>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="page-part">
+                            <h5>所属组</h5>
+                            <div>
+                                <div class="group-item" v-for="item in belongs">
+                                    <div class="group-name">
+                                        <span v-text="item.name"></span>
+                                        <span class="close" @click="delBelongs(item)"></span>
+                                    </div>
+                                </div>
+                                <div class="group-item" @click="showModal('group')">
+                                    <div class="group-add">
+                                        <span>+添加</span>
+                                    </div>
+                                </div>
+                                <div class="clearfix"></div>
+                            </div>
+                        </div>
+                        <div class="page-part">
+                            <h5>所含子类</h5>
+                            <div class="page-detail-handle">
+                                <el-button icon="plus" @click="showModal('subfield')">添加</el-button>
+                                <el-input placeholder="请输入内容" class="search-input">
+                                    <el-button slot="append" icon="search"></el-button>
+                                </el-input>
+                            </div>
+                            <div class="well">
+                                <el-tag class="tag" v-for="item in subfields" :key="item.name" :closable="true" type="gray" @close="delSubfields(item)"><span v-text="item.name"></span></el-tag>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- modal -->
+                    <div v-if="modal_isShow_group" class="modal">
+                        <div class="modalbox">
+                            <div class="modalbox-header">添加所属组</div>
+                            <div class="modalbox-main">
+                                <div>
+                                    <h5>可选组</h5>
+                                    <div class="well">
+                                        <el-tag class="tag" v-for="item in modalSelectableGroups" :key="item.name" type="gray"><span v-text="item.name" @click="modalSelectGroup(item)"></span></el-tag>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h5>已添加</h5>
+                                    <div class="">
+                                        <el-tag class="tag" v-for="item in modalSelectedGroups" :key="item.name" :closable="true" type="gray" @close="modalRemoveGroup(item)"><span v-text="item.name"></span></el-tag>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modalbox-footer">
+                                <button class="btn btn-cancel" @click="hideModal('group')">取消</button>
+                                <button class="btn btn-submit" @click="modalAddGroup">确定</button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- modal -->
+                    <div v-if="modal_isShow_subfield" class="modal">
+                        <div class="modalbox">
+                            <div class="modalbox-header">添加所含子类</div>
+                            <div class="modalbox-main">
+                                <div>
+                                    <h5>可选子类</h5>
+                                    <div class="well">
+                                        <el-tag class="tag" v-for="item in modalSelectableSubfields" :key="item.name" type="gray"><span v-text="item.name" @click="modalSelectSubfield(item)"></span></el-tag>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h5>已添加</h5>
+                                    <div class="">
+                                        <el-tag class="tag" v-for="item in modalSelectedSubfields" :key="item.name" :closable="true" type="gray" @close="modalRemoveSubfield(item)"><span v-text="item.name"></span></el-tag>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modalbox-footer">
+                                <button class="btn btn-cancel" @click="hideModal('subfield')">取消</button>
+                                <button class="btn btn-submit" @click="modalAddSubfields">确定</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- page-subfields -->
+                <div id="page-subfields" class="page">
+                    <div class="crumbs">
+                        <i class="icon-svg icon-home"></i> 分类管理 / 子类
+                    </div>
+                    <div class="page-title">子类</div>
+                    <div class="page-handle">
+                        <el-button icon="plus" @click="showModal">添加</el-button>
+                        <el-button icon="delete" @click="delAll">批量删除</el-button>
+                        <el-input placeholder="请输入内容" class="search-input">
+                            <el-button slot="append" icon="search"></el-button>
+                        </el-input>
+                    </div>
+                    <div class="page-content">
+                        <!-- 显示的表格 -->
+                        <el-table :data="tableData" border style="width: 100%, height: 600px" ref="multipleTable" @selection-change="handleSelectionChange">
+                            <el-table-column type="selection" width="55"></el-table-column>
+                            <el-table-column type="index" label="序号" width="100"></el-table-column>
+                            <el-table-column prop="name" label="分类名称" sortable></el-table-column>
+                            <el-table-column label="关键词">
+                                <template scope="scope">
+                                    <el-tag type="gray" :key="sub_item" v-for='sub_item in scope.row.keywords' v-text="sub_item"></el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="desc" label="描述" sortable></el-table-column>
+                            <el-table-column label="操作">
+                                <template scope="scope">
+                                    <el-button size="small" @click="handleEdit(scope.$index, scope.row)">编辑</el-button>
+                                    <el-button size="small" type="danger" @click="handleDelete(scope.$index, scope.row)">删除</el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+                    <!-- subfield modal -->
+                    <div v-if="modal_isShow" class="modal">
+                        <div class="modalbox">
+                            <div class="modalbox-header">添加子类</div>
+                            <div class="modalbox-main">
+                                <div>
+                                    <h5>分类名称</h5>
+                                    <el-input placeholder="请输入内容" v-model="add_subfield_name"></el-input>
+                                </div>
+                                <div>
+                                    <h5>关键词</h5>
+                                    <div class="well">
+                                        <el-tag class="tag" :key="tag" v-for="tag in add_subfield_keywords" :closable="true" :close-transition="false" @close="handleClose(tag)" v-text="tag"></el-tag>
+                                        <el-input class="input-new-tag" v-if="add_subfield_keyword_inputVisible" v-model="add_subfield_keyword" ref="saveTagInput" size="mini" @keyup.enter.native="handleInputConfirm" @blur="handleInputConfirm">
+                                        </el-input>
+                                        <el-button v-else class="button-new-tag" size="small" @click="showInput">+ 关键词</el-button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h5>描述</h5>
+                                    <textarea class="well" v-model="add_subfield_desc"></textarea>
+                                </div>
+                            </div>
+                            <div class="modalbox-footer">
+                                <button class="btn btn-cancel" @click="hideModal">取消</button>
+                                <button class="btn btn-submit" @click="addSubfield">确定</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- page-subfield-detail -->
+                <div id="page-subfield-detail" class="page">
+                    <div class="crumbs">
+                        <i class="icon-svg icon-home"></i> 分类管理 / 子类 / 详情页
+                    </div>
+                    <div class="page-content page-content-detail">
+                        <div class="detail-control">
+                            <button class="btn btn-cancel" @click="cancelUpdate">取消</button>
+                            <button class="btn btn-submit" @click="update">保存</button>
+                        </div>
+                        <div class="page-part">
+                            <div class="label-item">
+                                <div class="label-item-key">名称</div>
+                                <div class="label-item-value">
+                                    <el-input v-model="name"></el-input>
+                                </div>
+                            </div>
+                            <div class="label-item">
+                                <div class="label-item-key">关键词</div>
+                                <div class="label-item-value">
+                                    <el-tag class="tag" v-for="item in keywords" :key="item" :closable="true" @close="delKeyword(item)"><span v-text="item"></span></el-tag>
+                                    <el-input class="input-new-tag" v-if="keyword_inputVisible" v-model="keyword_inputValue" ref="saveTagInput" size="mini" @keyup.enter.native="handleInputConfirm" @blur="handleInputConfirm">
+                                    </el-input>
+                                    <el-button v-else class="button-new-tag" size="small" @click="showInput">+ 关键词</el-button>
+                                </div>
+                            </div>
+                            <div class="label-item">
+                                <div class="label-item-key">描述</div>
+                                <div class="label-item-value">
+                                    <el-input type="textarea" :rows="2" v-model="desc"></el-input>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="page-part">
+                            <h5>所属分类</h5>
+                            <div class="page-detail-handle">
+                                <el-button icon="plus" @click="showModal('fields')">添加</el-button>
+                                <el-input placeholder="请输入内容" class="search-input">
+                                    <el-button slot="append" icon="search"></el-button>
+                                </el-input>
+                            </div>
+                            <div class="well">
+                                <el-tag class="tag" type="gray" v-for="item in belongs" :key="item.name" :closable="true" @close="delField(item)"><span v-text="item.name"></span></el-tag>
+                            </div>
+                        </div>
+                        <div class="page-part">
+                            <h5>公众号</h5>
+                            <div class="page-detail-handle">
+                                <el-button icon="plus" @click="showModal('accounts')">添加</el-button>
+                                <el-input placeholder="请输入内容" class="search-input">
+                                    <el-button slot="append" icon="search"></el-button>
+                                </el-input>
+                            </div>
+                            <div class="well">
+                                <div class="tag-account" v-for="item in accounts">
+                                    <img src="imgs/yasuo.jpg" alt="img">
+                                    <span v-text="item.name"></span>
+                                    <span class="close" @click="delAccount(item)"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- modal -->
+                        <div v-if="modal_isShow_fields" class="modal">
+                            <div class="modalbox">
+                                <div class="modalbox-header">添加所属分类</div>
+                                <div class="modalbox-main">
+                                    <div>
+                                        <h5>可选分类</h5>
+                                        <div class="well">
+                                            <el-tag class="tag" v-for="item in modalSelectableFields" :key="item.name" type="gray"><span v-text="item.name" @click="modalSelectField(item)"></span></el-tag>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h5>已添加</h5>
+                                        <div class="">
+                                            <el-tag class="tag" v-for="item in modalSelectedFields" :key="item.name" :closable="true" type="gray" @close="modalRemoveField(item)"><span v-text="item.name"></span></el-tag>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modalbox-footer">
+                                    <button class="btn btn-cancel" @click="hideModal('fields')">取消</button>
+                                    <button class="btn btn-submit" @click="modalAddFields">确定</button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- modal -->
+                        <div v-if="modal_isShow_accounts" class="modal">
+                            <div class="modalbox">
+                                <div class="modalbox-header">添加所含公众号</div>
+                                <div class="modalbox-main">
+                                    <div>
+                                        <h5>可选公众号</h5>
+                                        <div class="well" id="selectedAccountWrap">
+                                            <div id="selectedAccount">
+                                                <el-tag class="tag" v-for="item in modalSelectableAccounts" :key="item.name" type="gray"><span v-text="item.name" @click="modalSelectAccount(item)"></span></el-tag>
+                                            </div>
+                                            
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h5>已添加</h5>
+                                        <div class="">
+                                            <el-tag class="tag" v-for="item in modalSelectedAccounts" :key="item.name" :closable="true" type="gray" @close="modalRemoveAccount(item)"><span v-text="item.name"></span></el-tag>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modalbox-footer">
+                                    <button class="btn btn-cancel" @click="hideModal('accounts')">取消</button>
+                                    <button class="btn btn-submit" @click="modalAddAccounts">确定</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- page-wechataccounts -->
+                <div id="page-wechataccounts" class="page">
+                    <div class="crumbs">
+                        <i class="icon-svg icon-gongzhonghao"></i> 账号管理 / 公众号
+                    </div>
+                    <div class="page-title">公众号</div>
+                    <div class="page-handle">
+                        <el-button icon="plus" @click="showModal">添加</el-button>
+                        <el-button icon="delete" @click="delAll">批量删除</el-button>
+                        <el-input placeholder="请输入内容" class="search-input">
+                            <el-button slot="append" icon="search"></el-button>
+                        </el-input>
+                    </div>
+                    <div class="page-content">
+                        <div class="page-kol">
+                            <span class="icon icon-select" :class="{active: kol_isSelect}" @click="selectKol"></span>
+                            <img class="icon-kol" src="imgs/KOL.svg" alt="kol icon">
+                        </div>
+                        <!-- 显示的表格 -->
+                        <el-table :data="tableData" border style="width: 100%, height: 600px" ref="multipleTable" @selection-change="handleSelectionChange">
+                            <el-table-column type="selection" width="55"></el-table-column>
+                            <el-table-column type="index" label="序号" width="80"></el-table-column>
+                            <el-table-column prop="account" label="微信号" sortable></el-table-column>
+                            <el-table-column prop="name" label="公众号名称" sortable></el-table-column>
+                            <el-table-column prop="kol" label="KOL" width="80">
+                                <template scope="scope">
+                                    <img class="icon-kol" src="imgs/KOL.svg" alt="kol icon" v-if="scope.row.kol == 'yes'">
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="类别" :filters="[{ text: '组', value: '组' }, { text: '分类', value: '分类' }, { text: '子类', value: '子类' }]" :filter-method="filter" filter-placement="bottom-end">
+                                <template scope="scope">
+                                    <el-tag :type="'primary'" :key="sub_item.name" v-for='sub_item in scope.row.belongs' v-text="sub_item.name"></el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="级别" prop="level" sortable :filters="[{ text: '一级', value: 1 }, { text: '二级', value: 2 }, { text: '三级', value: 3 }, { text: '四级', value: 4 }, { text: '五级', value: 5 }, { text: '六级', value: 6 }, { text: '七级', value: 7 }, { text: '八级', value: 8 }]" :filter-method="filterLevel" filter-placement="bottom-end">
+                            </el-table-column>
+                            <el-table-column prop="hot_index" label="热度指数" sortable></el-table-column>
+                            <el-table-column prop="update_date" label="更新时间" sortable></el-table-column>
+                            <el-table-column label="操作">
+                                <template scope="scope">
+                                    <el-button size="small" @click="handleEdit(scope.$index, scope.row)">编辑</el-button>
+                                    <el-button size="small" type="danger" @click="handleDelete(scope.$index, scope.row)">删除</el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+                    <!-- modal -->
+                    <div v-if="createAccountBoxIsShow" class="modal">
+                        <div class="modalbox">
+                            <div class="modalbox-header">添加公众号</div>
+                            <div class="modalbox-main">
+                                <div>
+                                    <div class="modal-row">
+                                        <div class="modal-key">
+                                            <span>公众号</span>
+                                        </div>
+                                        <div class="modal-value">
+                                            <el-input placeholder="请输入公众号" v-model="add_account_name"></el-input>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="modal-row">
+                                        <div class="modal-key">
+                                            <span>微信号</span>
+                                        </div>
+                                        <div class="modal-value">
+                                            <el-input placeholder="请输入微信号" v-model="add_account_account"></el-input>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="modal-row">
+                                        <div class="modal-key">
+                                            <span>是否为</span>
+                                            <img class="icon icon-kol" src="imgs/KOL.svg" alt="KOL icon">
+                                        </div>
+                                        <div class="modal-value">
+                                            <el-switch v-model="modal_kol_isSelect" on-color="#13ce66" off-color="#ff4949" on-text="" off-text="" @change="kolChange"></el-switch>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- 垂直平台 -->
+                                <div class="modal-row">
+                                    <div class="modal-key">
+                                        <span>垂直平台</span>
+                                    </div>
+                                    <div class="modal-value">
+                                        <el-select v-model="dropdown_selected" multiple placeholder="请选择" @change="modalWemediasChange">
+                                            <el-option v-for="item in dropdown_selectable" :key="item.name" :label="item.name" :value="item.name">
+                                            </el-option>
+                                        </el-select>
+                                    </div>
+                                </div>
+                                <!-- 列表页添加模态框中的账号等级 -->
+                                <div class="modal-row">
+                                    <p>账号等级 <span class="level-tpis">根据月度平均阅读量分级</span></p>
+                                    <el-radio-group fill="#ffffff" v-model="level" @change="levelChange">
+                                        <el-radio :label="1">一级 10W+</el-radio>
+                                        <el-radio :label="2">二级 1W+</el-radio>
+                                        <el-radio :label="3">三级 5K~1W</el-radio>
+                                        <el-radio :label="4">四级 1K+</el-radio>
+                                        <el-radio :label="5">五级 500~1K</el-radio>
+                                        <el-radio :label="6">六级 0~500</el-radio>
+                                        <el-radio :label="7">七级 过去7天内发布过文章</el-radio>
+                                        <el-radio :label="8">八级 过去7天内未发布过文章</el-radio>
+                                    </el-radio-group>
+                                </div>
+
+                                <div class="modal-selectedWemediasInfo">
+                                    <div class="modal-selectedWemediasInfo-item" v-for="item in modalSelectedWemedias">
+                                        <span class="modal-wemedias-key" v-text="item.label"></span>
+                                        <el-input class="modal-wemedias-value" v-model="item.name"></el-input>
+                                        <span class="modal-wemedias-website">地址</span>
+                                        <el-input class="modal-wemedias-value" v-model="item.link"></el-input>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p>可选的子类</p>
+                                    <el-select v-model="modalSelectedField" clearable placeholder="选分类筛选子类" @change="changeSelectedField">
+                                        <el-option v-for="item in modalSelectableFields" :key="item.name" :label="item.name" :value="item.id"></el-option>
+                                    </el-select>
+                                    <div class="well">
+                                        <el-tag class="tag" v-for="item in modalSelectableSubfields" :key="item.name" type="gray"><span v-text="item.name" @click="modalSelectSubfield(item)"></span></el-tag>
+                                    </div>
+                                    <p>已选的子类：</p>
+                                    <div class="">
+                                        <el-tag class="tag" v-for="item in modalSelectedSubfields" :key="item.name" type="gray" :closable="true" @close="modalDelSelectedSubfield(item)"><span v-text="item.name"></span></el-tag>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modalbox-footer">
+                                <button class="btn btn-cancel" @click="hideModal">取消</button>
+                                <button class="btn btn-submit" @click="addAccount">确定</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- page-wechataccount-detail -->
+                <div id="page-wechataccount-detail" class="page">
+                    <div class="crumbs">
+                        <i class="el-icon-menu"></i> 公众号 / 详情页
+                    </div>
+                    <div class="page-content page-content-detail">
+                        <div class="detail-control">
+                            <button class="btn btn-cancel" @click="cancelUpdate">取消</button>
+                            <button class="btn btn-submit" @click="update">保存</button>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-key">
+                                <span>公众号名</span>
+                            </div>
+                            <div class="detail-value">
+                                <el-input v-model="name" @blur=""></el-input>
+                            </div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-key">
+                                <span>微信号</span>
+                            </div>
+                            <div class="detail-value">
+                                <el-input v-model="account" @blur=""></el-input>
+                            </div>
+                        </div>
+                        <div class="detail-row detail-hot">
+                            <div class="detail-key">
+                                <span>热度指数</span>
+                            </div>
+                            <div class="detail-value">
+                                <span>9</span>
+                            </div>
+                        </div>
+                        <div class="detail-row detail-updateTime">
+                            <div class="detail-key">
+                                <span>更新时间</span>
+                            </div>
+                            <div class="detail-value">
+                                <span>2017-08-16</span>
+                            </div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-key">
+                                <span>是否为</span>
+                                <img class="icon-kol" src="imgs/KOL.svg" alt="kol icon">
+                            </div>
+                            <div class="detail-value">
+                                <el-switch v-model="kol_isSelect" on-color="#13ce66" off-color="#ff4949" on-text="" off-text="" @change="kolChange"></el-switch>
+                            </div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-key">账号等级</div>
+                            <div class="detail-value"><div class="level-tpis">根据月度平均阅读量分级</div></div>
+                            <div style="padding-left: 26px;padding-top: 10px;">
+                                <el-radio-group  fill="#ffffff" v-model="level" @change="levelChange">
+                                    <el-radio :label="1">一级 10W+</el-radio>
+                                    <el-radio :label="2">二级 1W+</el-radio>
+                                    <el-radio :label="3">三级 5K~1W</el-radio>
+                                    <el-radio :label="4">四级 1K+</el-radio>
+                                    <el-radio :label="5">五级 500~1K</el-radio>
+                                    <el-radio :label="6">六级 0~500</el-radio>
+                                    <el-radio :label="7">七级 过去7天内发布过文章</el-radio>
+                                    <el-radio :label="8">八级 过去7天内未发布过文章</el-radio>
+                                </el-radio-group>
+                            </div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-key">
+                                <span>垂直平台</span>
+                            </div>
+                            <div class="detail-value">
+                                <el-select v-model="selectedWemediasStr" multiple placeholder="请选择" @change="detailWemediasChange" @remove-tag="removeWemedia" style="width: 813px">
+                                    <el-option v-for="item in selectableWemedias" :key="item.label" :label="item.label" :value="item.label">
+                                    </el-option>
+                                </el-select>
+                            </div>
+                        </div>
+                        <div class="detail-row" v-for="item in selectedWemedias">
+                            <div class="detail-key">
+                                <span v-text="item.label"></span>
+                            </div>
+                            <div class="detail-value">
+                                <el-input v-model="item.name"></el-input>
+                            </div>
+                            <div class="detail-key">
+                                <span>地址</span>
+                            </div>
+                            <div class="detail-value input-website">
+                                <el-input v-model="item.link"></el-input>
+                            </div>
+                        </div>
+                        <div class="article-list">
+                            <p>最新文章列表</p>
+                            <div class="well">
+                                <ul>
+                                    <li>文章1</li>
+                                    <li>文章2</li>
+                                    <li>文章3</li>
+                                    <li>文章4</li>
+                                    <li>文章5</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="subfields-container">
+                            <p>所属子类</p>
+                            <el-button icon="plus" @click="showModal">添加</el-button>
+                            <div class="well" style="margin-top: 10px">
+                                <el-tag class="tag" v-for="item in belongs" type="gray" :key="item.name" :closable="true" @close="delSubfield(item)"><span v-text="item.name"></span></el-tag>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- modal -->
+                    <div v-if="modal_isShow" class="modal">
+                        <div class="modalbox">
+                            <div class="modalbox-header">为公众号添加子类</div>
+                            <div class="modalbox-main">
+                                <h5>可选子类</h5>
+                                <div class="well">
+                                    <el-tag class="tag" type="gray" v-for="item in modalSelectableSubfields" :key="item.name"><span v-text="item.name" @click="modalSelectSubfield(item)">1</span></el-tag>
+                                </div>
+                                <h5>已选</h5>
+                                <div>
+                                    <el-tag class="tag" type="gray" v-for="item in modalSelectedSubfields" :key="item.name" :closable="true" @close="modalRemoveSubfield(item)"><span v-text="item.name"></span></el-tag>
+                                </div>
+                            </div>
+                            <div class="modalbox-footer">
+                                <button class="btn btn-cancel" @click="hideModal">取消</button>
+                                <button class="btn btn-submit" @click="modelAddSubfields">确定</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="page-clusters" class="page">
+                    <div class="crumbs">
+                        <i class="icon-svg icon-gongzhonghao"></i> 账号管理 / cluster
+                    </div>
+                    <div class="page-title">cluster</div>
+                    <div class="page-content">
+                        <p>clusters数量：<span v-text="total"></span></p>
+                        <div style="width: 600px;margin: 10px 0;">
+                            <el-input placeholder="请输入内容">
+                                <el-button slot="append" icon="search"></el-button>
+                            </el-input>
+                        </div>
+                        <div>
+                            <el-table :data="tableData" border style="width: 100%" @row-click="enterDetail">
+                                <el-table-column type="index" label="序号" width="80"></el-table-column>
+                                <el-table-column prop="name" label="cluster name" width="180">
+                                </el-table-column>
+                                <el-table-column prop="count" label="count" width="180">
+                                </el-table-column>
+                                <el-table-column prop="" label="此处魔法，勿动！">
+                                </el-table-column>
+                            </el-table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="page-cluster-detail" class="page">
+                    <div class="crumbs">
+                        <i class="icon-svg icon-gongzhonghao"></i> 账号管理 / cluster / 详情页
+                    </div>
+                    <div class="page-content">
+                        <p>所属：<span v-text="">pack server</span></p>
+                        <p>微信号数量：<span v-text="total"></span></p>
+                        <div style="width: 600px;margin: 10px 0;">
+                            <el-input placeholder="请输入内容">
+                                <el-button slot="append" icon="search"></el-button>
+                            </el-input>
+                        </div>
+                        <div>
+                            <el-table :data="tableData" border style="width: 100%">
+                                <el-table-column type="index" label="序号" width="80"></el-table-column>
+                                <el-table-column prop="account" label="account" width="180">
+                                </el-table-column>
+                                <el-table-column prop="name" label="name" width="180">
+                                </el-table-column>
+                                <el-table-column prop="" label="此处魔法，勿动！">
+                                </el-table-column>
+                            </el-table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="page-packserver" class="page">
+                    <div class="crumbs">
+                        <i class="icon-svg icon-system"></i> 系统状态 / pack server
+                    </div>
+                    <div class="page-title">pack server</div>
+                    <div class="page-content">
+                        <p>Pack server 数量：<span v-text="total"></span></p>
+                        <div>
+                            <el-table :data="tableData" border style="width: 100%" @row-click="enterDetail">
+                                <el-table-column type="index" label="序号" width="80"></el-table-column>
+                                <el-table-column prop="ip" label="IP" width="180">
+                                </el-table-column>
+                                <el-table-column prop="id" label="ID" width="180">
+                                </el-table-column>
+                                <el-table-column prop="" label="此处魔法，勿动！">
+                                </el-table-column>
+                            </el-table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="page-packserver-detail" class="page">
+                    <div class="crumbs">
+                        <i class="icon-svg icon-system"></i> 系统状态 / pack server / 详情页
+                    </div>
+                    <div class="page-title">pack server</div>
+                    <div class="page-content">
+                        <div class="packserver-info">
+                            <div class="packserver-info-item">
+                                <img class="packserver-icon" src="imgs/IP.svg" alt="ip icon">
+                                <p>192.168.1.110</p>
+                            </div>
+                            <div class="packserver-info-item">
+                                <img class="packserver-icon" src="imgs/ID.svg" alt="id icon">
+                                <p>q1w2e3r4</p>
+                            </div>
+                            <div class="clearfix"></div>
+                        </div>
+                        <div>
+                            <el-table :data="tableData" border style="width: 100%" @row-click="enterDetail">
+                                <el-table-column type="index" label="序号" width="80"></el-table-column>
+                                <el-table-column prop="name" label="Cluster" width="180">
+                                </el-table-column>
+                                <el-table-column prop="id" label="id" width="180">
+                                </el-table-column>
+                                <el-table-column prop="" label="此处也有魔法，勿动！">
+                                </el-table-column>
+                            </el-table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="page-sysfix" class="page">
+                    <div class="crumbs">
+                        <i class="icon-svg icon-settings"></i> 系统维护
+                    </div>
+                    <div class="page-title">系统维护</div>
+                    
+                    <div class="page-content">
+                        <div class="sysfix-reset">
+                            <button class="btn btn-hollowblue" @click="refactorClusters">重新构建集合</button>
+                        </div>
+                        <div class="sysfix-import">
+                            <!-- <el-upload id="uploadAccounts" action="http://192.168.0.114/admin/operate/import/accounts" auto-upload :on-success="uploadSuccess" :on-error="uploadFail">
+                              <el-button size="default" class="btn btn-hollowblue">导入公众号</el-button>
+                              <div slot="tip" class="el-upload__tip">上传的文件名必须为'new_accounts'，且文件不能超过2.5M</div>
+                            </el-upload> -->
+                            <form id="upload_accounts" name="new_accounts">
+                                <input id="fileUpload" type="file" name="new_accounts" style="display: none;" @change="uploadChange">
+                                <label for="fileUpload" class="btn btn-hollowblue">导入公众号</label>
+                                <div slot="tip" class="el-upload__tip" style="margin-top: 20px;">上传的文件不能超过2.5M</div>
+                                <div class="uploadFilesList" v-if="upload_board_show">
+                                    <div v-text="upload_file_name"></div>
+                                    <button class="" @click="upload">上传</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/jquery-1.11.2.min.js"></script>
+    <script src="js/vue.js"></script>
+    <script src="js/element-ui.js"></script>
+    <script src="js/index.js"></script>
+</body>
+
+</html>

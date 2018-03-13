@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh">
+<!-- {% load static %} -->
+<head>
+    <meta charset="UTF-8">
+    <title>后台管理系统</title>
+    <link rel="stylesheet" href="css/element-ui.css">
+    <link rel="stylesheet" href="css/login.css">
+</head>
+
+<body>
+    <div class="login-wrap" id="app">
+        <div class="login-box">
+            <img src="imgs/logo-login.png" alt="logo login">
+            <p class="logo-cn">公 众 号 管 理 系 统</p>
+            <form>
+                <input id="uid" v-model="ruleForm.username" type="text" name="username" placeholder="请输入账号" autofocus required>
+                <input id="pwd" v-model="ruleForm.password" type="password" name="password" placeholder="请输入密码" v-on:keyup.enter="submitForm">
+                <!-- <button @click="submitForm">登录</button> -->
+            </form>
+            <!-- <a class="forget_password" href="javascript:;">忘记密码？</a> -->
+        </div>
+    </div>
+
+
+    <script src="js/vue.js"></script>
+    <script src="js/element-ui.js"></script>
+    <script src="js/jquery-1.11.2.min.js"></script>
+    <script src="js/md5.js"></script>
+    <script src="js/login.js"></script>
+</body>
+
+</html>
